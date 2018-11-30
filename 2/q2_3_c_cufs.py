@@ -101,12 +101,12 @@ ngf = 16
 ndf = 16
 
 # Number of training epochs
-num_epochs = 2000
+num_epochs = 1200
 
 # Learning rate for optimizers
 # lr = 0.005
-lrD = 0.001
-lrG = 0.001
+lrD = 0.0005
+lrG = 0.0005
 
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
@@ -115,7 +115,7 @@ beta1 = 0.5
 ngpu = 1
 
 # Discriminator iterations
-d_iter = 5
+d_iter = 3
 
 # WGAN clamps
 clamp_lower = -0.01
@@ -554,7 +554,7 @@ for epoch in range(num_epochs):
         # Since we just updated D, perform another forward pass of all-fake batch through D
         output = netD(fake).view(-1)
         # Calculate G's loss based on this output
-        errG = -1.0 * output.mean() #criterion(output, label)
+        errG =  output.mean() #criterion(output, label)
         # Calculate gradients for G
         errG.backward()
         D_G_z2 = output.mean().item()
