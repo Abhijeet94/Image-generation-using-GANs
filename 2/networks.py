@@ -3,6 +3,15 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import pdb
+import random
+import torch.backends.cudnn as cudnn
+import torch.optim as optim
+import torch.utils.data
+import torchvision.datasets as dset
+import torchvision.transforms as transforms
+import torchvision.utils as vutils
+import matplotlib.pyplot as plt
 
 # The Generator and Discriminator are constructed for image size 64
 # i.e, the generator generates image size of 64 X 64 and the discriminator takes
@@ -113,19 +122,6 @@ def weights_init(model):
 		nn.init.normal_(model.weight.data, 1.0, 0.02)
 		nn.init.constant_(model.bias.data, 0)
 
-import pdb
-import random
-import torch
-import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import torch.optim as optim
-import torch.utils.data
-import torchvision.datasets as dset
-import torchvision.transforms as transforms
-import torchvision.utils as vutils
-import numpy as np
-import matplotlib.pyplot as plt
-from networks import *
 
 class DCGAN:
 	def __init__(self, dataroot, batchSize=128, imageSize=64, nc=1, numEpochs=500, lr=0.0002, nz=100, ngf=64, ndf=64):
