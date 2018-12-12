@@ -75,7 +75,7 @@ transform = transforms.Compose([
 ])
 
 image_location = "CUHK"
-batchSize = 1
+batch_size = 1
 shuffle = True
 numTrainEpochs = 1#50
 imgSize = 200
@@ -89,10 +89,10 @@ root = image_location + "_results/"
 model = "CUHK_"
 
 train_dataset = ImageLoader(os.path.join(image_location, "train"), transform)
-train_loader = data.DataLoader(train_dataset, batchSize=batchSize, shuffle=shuffle)
+train_loader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
 
 test_dataset = ImageLoader(os.path.join(image_location, "test"), transform)
-test_loader = data.DataLoader(test_dataset, batchSize=batchSize, shuffle=shuffle)
+test_loader = data.DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
 def imgs_resize(imgs, resize_scale = 286):
     outputs = torch.FloatTensor(imgs.size()[0], imgs.size()[1], resize_scale, resize_scale)
@@ -321,7 +321,7 @@ for epoch in range(numTrainEpochs):
     num_iter = 0
     for x_ in train_loader:
         # train discriminator D
-        D.zero_grad()
+        # D.zero_grad()
 
         if inverse_order:
             y_ = x_[:, :, :, 0:imgSize]
@@ -342,28 +342,28 @@ for epoch in range(numTrainEpochs):
 
         x_, y_ = Variable(x_), Variable(y_)
 
-        D_result = D(x_, y_).squeeze()
-        D_real_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size())))
+        # D_result = D(x_, y_).squeeze()
+        # D_real_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size())))
 
         G_result = G(x_)
-        D_result = D(x_, G_result).squeeze()
-        D_fake_loss = BCE_loss(D_result, Variable(torch.zeros(D_result.size())))
+        # D_result = D(x_, G_result).squeeze()
+        # D_fake_loss = BCE_loss(D_result, Variable(torch.zeros(D_result.size())))
 
-        D_train_loss = (D_real_loss + D_fake_loss) * 0.5
-        D_train_loss.backward()
-        D_optimizer.step()
+        # D_train_loss = (D_real_loss + D_fake_loss) * 0.5
+        # D_train_loss.backward()
+        # D_optimizer.step()
 
-        train_hist['D_losses'].append(D_train_loss.item())
+        # train_hist['D_losses'].append(D_train_loss.item())
 
-        D_losses.append(D_train_loss.item())
+        # D_losses.append(D_train_loss.item())
 
         # train generator G
         G.zero_grad()
 
         G_result = G(x_)
-        D_result = D(x_, G_result).squeeze()
+        # D_result = D(x_, G_result).squeeze()
 
-        G_train_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size()))) + L1_lambda * L1_loss(G_result, y_)
+        G_train_loss = L1_loss(G_result, y_)
         G_train_loss.backward()
         G_optimizer.step()
 
@@ -373,11 +373,10 @@ for epoch in range(numTrainEpochs):
 
         num_iter += 1
 
-    print('[%d/%d], loss_d: %.3f, loss_g: %.3f' % ((epoch + 1), numTrainEpochs, torch.mean(torch.FloatTensor(D_losses)),
-                                                              torch.mean(torch.FloatTensor(G_losses))))
+    print('[%d/%d], loss_g: %.3f' % ((epoch + 1), numTrainEpochs, torch.mean(torch.FloatTensor(G_losses))))
 
 torch.save(G.state_dict(), 'generator_param.pkl')
-torch.save(D.state_dict(), 'discriminator_param.pkl')
+# torch.save(D.state_dict(), 'discriminator_param.pkl')
 with open('train_hist.pkl', 'wb') as f:
     pickle.dump(train_hist, f)
 
