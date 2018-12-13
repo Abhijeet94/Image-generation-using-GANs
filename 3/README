@@ -1,13 +1,2 @@
-Run the py as ipynb on colab
-
-For part 1 ensure that the discriminator loss is commented out and the lambda parameter is ommitted
-
-For part 2 set inverse_order = true
-
-For part 3 set inverse_order = false
-
-to generate the plots run: show_train_hist(train_hist, save = True)
-
-The plots are generated in the cwd while the images are saved in GDrive in CUHK_results folder.
-
-The code uses skip connections which is actually an ec. To not use skip connections uncomment the torch.cat in forward method of generator.
+- Run p1.py for part 1 and so on.
+- p1, p2, p3 use skip connections, p4 doesn't (p4 is for sketch to image)

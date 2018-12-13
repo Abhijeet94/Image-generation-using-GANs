@@ -107,15 +107,15 @@ ngf = 64
 ndf = 64
 lrG = 0.0002
 lrD = 0.0002
-inverse_order = True
+inverse_order = False
 L1_lambda = 100
-root = image_location + "_results2/"
+root = image_location + "_results_testOurs2_S2P/"
 model = "CUHK_"
 
 train_dataset = ImageLoader(os.path.join(image_location, "trainA"), os.path.join(image_location, "trainB"), transformTrain)
 train_loader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
 
-test_dataset = ImageLoader(os.path.join(image_location, "testA"), os.path.join(image_location, "testB"), transformTest)
+test_dataset = ImageLoader(os.path.join(image_location, "testOurs2"), os.path.join(image_location, "testOurs2"), transformTest)
 test_loader = data.DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
 def show_result(G, x_, y_, num_epoch, show = False, save = False, path = 'result.png'):
@@ -277,87 +277,14 @@ def normal_init(m, mean, std):
         m.weight.data.normal_(mean, std)
         m.bias.data.zero_()
 
-# network
-G = generator(ngf)
-D = discriminator(ndf)
-G.weight_init(mean=0.0, std=0.02)
-D.weight_init(mean=0.0, std=0.02)
-G
-D
-G.train()
-D.train()
-
-# loss
-BCE_loss = nn.BCELoss()
-L1_loss = nn.L1Loss()
-
-# Adam optimizer
-G_optimizer = optim.Adam(G.parameters(), lr=lrG, betas=(0.5, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr=lrD, betas=(0.5, 0.999))
-
-train_hist = {}
-train_hist['D_losses'] = []
-train_hist['G_losses'] = []
-
-for epoch in range(numTrainEpochs):
-    D_losses = []
-    G_losses = []
-    num_iter = 0
-    for x_, y_ in train_loader:
-        # train discriminator D
-        D.zero_grad()
-
-        if inverse_order:
-            x_, y_ = y_, x_
-
-        x_, y_ = Variable(x_), Variable(y_)
-
-        D_result = D(x_, y_).squeeze()
-        D_real_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size())))
-
-        G_result = G(x_)
-        D_result = D(x_, G_result).squeeze()
-        D_fake_loss = BCE_loss(D_result, Variable(torch.zeros(D_result.size())))
-
-        D_train_loss = (D_real_loss + D_fake_loss) * 0.5
-        D_train_loss.backward()
-        D_optimizer.step()
-
-        train_hist['D_losses'].append(D_train_loss.item())
-
-        D_losses.append(D_train_loss.item())
-
-        # train generator G
-        G.zero_grad()
-
-        G_result = G(x_)
-        D_result = D(x_, G_result).squeeze()
-
-        G_train_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size()))) + L1_lambda * L1_loss(G_result, y_)
-        G_train_loss.backward()
-        G_optimizer.step()
-
-        train_hist['G_losses'].append(G_train_loss.item())
-
-        G_losses.append(G_train_loss.item())
-
-        num_iter += 1
-
-    print('[%d/%d], loss_d: %.3f, loss_g: %.3f' % ((epoch + 1), numTrainEpochs, torch.mean(torch.FloatTensor(D_losses)),
-                                                              torch.mean(torch.FloatTensor(G_losses))))
-
-torch.save(G.state_dict(), 'generator_param2.pkl')
-torch.save(D.state_dict(), 'discriminator_param.pkl')
-with open('train_hist.pkl', 'wb') as f:
-    pickle.dump(train_hist, f)
-
-if not os.path.isdir(image_location + '_results2'):
-    os.mkdir(image_location + '_results2')
 
 G = generator(ngf)
 G
-G.load_state_dict(torch.load('generator_param2.pkl'))
+G.load_state_dict(torch.load('generator_param3.pkl'))
 G.eval()
+
+if not os.path.isdir(image_location + '_results_testOurs2_S2P'):
+    os.mkdir(image_location + '_results_testOurs2_S2P')
 
 # network
 with torch.no_grad():
@@ -369,11 +296,11 @@ with torch.no_grad():
         x_ = Variable(x_)
         test_image = G(x_)
 
-        path = image_location + '_results2/' + str(n) + '_input.png'
+        path = image_location + '_results_testOurs2_S2P/' + str(n) + '_input.png'
         plt.imsave(path, (x_[0].cpu().data.numpy().transpose(1, 2, 0) + 1) / 2)
-        path = image_location + '_results2/' + str(n) + '_output.png'
+        path = image_location + '_results_testOurs2_S2P/' + str(n) + '_output.png'
         plt.imsave(path, (test_image[0].cpu().data.numpy().transpose(1, 2, 0) + 1) / 2)
-        path = image_location + '_results2/' + str(n) + '_target.png'
+        path = image_location + '_results_testOurs2_S2P/' + str(n) + '_target.png'
         plt.imsave(path, (y_[0].numpy().transpose(1, 2, 0) + 1) / 2)
 
         n += 1
