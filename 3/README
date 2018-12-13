@@ -1,2 +1,10 @@
 - Run p1.py for part 1 and so on.
 - p1, p2, p3 use skip connections, p4 doesn't (p4 is for sketch to image)
+
+- The input dataroot can be modified by changing the "image_location" variable in each of the files. This dataroot contains 4 folders - "trainA", "trainB", "testA", "testB" representing the training pair of images and the testing pair of images.
+
+
+References
+- Image-to-Image Translation with Conditional Adversarial Networks
+Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, Alexei A. Efros
+
