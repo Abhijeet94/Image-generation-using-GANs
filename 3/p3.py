@@ -24,7 +24,7 @@ Original file is located at
 # !pip install PIL
 # !pip install image
 
-import os, time, pickle, argparse
+import os, time, pickle, argparse, pdb, random, time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -42,7 +42,7 @@ def make_dataset(dir):
     assert os.path.isdir(dir)
 
     for root, _, basenames in sorted(os.walk(dir)):
-        for basename in basenames:
+        for basename in sorted(basenames):
             if basename.endswith(".jpg"):
                 path = os.path.join(root, basename)
                 images.append(path)
@@ -52,30 +52,54 @@ def make_dataset(dir):
 
 class ImageLoader(data.Dataset):
 
-    def __init__(self, root, transform=None):
-        imgs = make_dataset(root)
-        assert len(imgs) > 0
-        self.imgs = imgs
+    def __init__(self, rootA, rootB, transform=None):
+        imgsA = make_dataset(rootA)
+        assert len(imgsA) > 0
+        self.imgsA = imgsA
+
+        imgsB = make_dataset(rootB)
+        assert len(imgsB) > 0
+        self.imgsB = imgsB
+
         self.transform = transform
 
     def __getitem__(self, index):
-        path = self.imgs[index]
-        img = Image.open(path).convert("RGB")
+        seed = np.random.randint(time.time())
+
+        pathA = self.imgsA[index]
+        imgA = Image.open(pathA).convert("RGB")
+        random.seed(seed)
         if self.transform is not None:
-            img = self.transform(img)
-        return img
+            imgA = self.transform(imgA)
+
+        pathB = self.imgsB[index]
+        imgB = Image.open(pathB).convert("RGB")
+        random.seed(seed)
+        if self.transform is not None:
+            imgB = self.transform(imgB)
+
+        return imgA, imgB
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.imgsA)
 
 # data_loader
-transform = transforms.Compose([
+transformTrain = transforms.Compose([
+        transforms.Resize((256, 256)),
+        # transforms.CenterCrop(256),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+])
+
+transformTest = transforms.Compose([
+        transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 ])
 
 image_location = "CUHK"
-batchSize = 1
+batch_size = 1
 shuffle = True
 numTrainEpochs = 1#50
 imgSize = 200
@@ -85,14 +109,14 @@ lrG = 0.0002
 lrD = 0.0002
 inverse_order = False
 L1_lambda = 100
-root = image_location + "_results/"
+root = image_location + "_results3/"
 model = "CUHK_"
 
-train_dataset = ImageLoader(os.path.join(image_location, "train"), transform)
-train_loader = data.DataLoader(train_dataset, batchSize=batchSize, shuffle=shuffle)
+train_dataset = ImageLoader(os.path.join(image_location, "trainA"), os.path.join(image_location, "trainB"), transformTrain)
+train_loader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
 
-test_dataset = ImageLoader(os.path.join(image_location, "test"), transform)
-test_loader = data.DataLoader(test_dataset, batchSize=batchSize, shuffle=shuffle)
+test_dataset = ImageLoader(os.path.join(image_location, "testA"), os.path.join(image_location, "testB"), transformTest)
+test_loader = data.DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
 
 def imgs_resize(imgs, resize_scale = 286):
     outputs = torch.FloatTensor(imgs.size()[0], imgs.size()[1], resize_scale, resize_scale)
@@ -230,34 +254,32 @@ class generator(nn.Module):
 
     # forward method
     def forward(self, input):
-        e1 = self.conv1(input)
-        e2 = self.conv2_bn(self.conv2(F.leaky_relu(e1, 0.2)))
-        e3 = self.conv3_bn(self.conv3(F.leaky_relu(e2, 0.2)))
-        e4 = self.conv4_bn(self.conv4(F.leaky_relu(e3, 0.2)))
-        e5 = self.conv5_bn(self.conv5(F.leaky_relu(e4, 0.2)))
-        e6 = self.conv6_bn(self.conv6(F.leaky_relu(e5, 0.2)))
-        e7 = self.conv7_bn(self.conv7(F.leaky_relu(e6, 0.2)))
-        e8 = self.conv8(F.leaky_relu(e7, 0.2))
-        # e8 = self.conv8_bn(self.conv8(F.leaky_relu(e7, 0.2)))
-        d1 = F.dropout(self.deconv1_bn(self.deconv1(F.relu(e8))), 0.5, training=True)
-        d1 = torch.cat([d1, e7], 1)
-        d2 = F.dropout(self.deconv2_bn(self.deconv2(F.relu(d1))), 0.5, training=True)
-        d2 = torch.cat([d2, e6], 1)
-        d3 = F.dropout(self.deconv3_bn(self.deconv3(F.relu(d2))), 0.5, training=True)
-        d3 = torch.cat([d3, e5], 1)
-        d4 = self.deconv4_bn(self.deconv4(F.relu(d3)))
-        # d4 = F.dropout(self.deconv4_bn(self.deconv4(F.relu(d3))), 0.5)
-        d4 = torch.cat([d4, e4], 1)
-        d5 = self.deconv5_bn(self.deconv5(F.relu(d4)))
-        d5 = torch.cat([d5, e3], 1)
-        d6 = self.deconv6_bn(self.deconv6(F.relu(d5)))
-        d6 = torch.cat([d6, e2], 1)
-        d7 = self.deconv7_bn(self.deconv7(F.relu(d6)))
-        d7 = torch.cat([d7, e1], 1)
-        d8 = self.deconv8(F.relu(d7))
-        o = torch.tanh(d8)
+        encoder1 = self.conv1(input)
+        encoder2 = self.conv2_bn(self.conv2(F.leaky_relu(encoder1, 0.2)))
+        encoder3 = self.conv3_bn(self.conv3(F.leaky_relu(encoder2, 0.2)))
+        encoder4 = self.conv4_bn(self.conv4(F.leaky_relu(encoder3, 0.2)))
+        encoder5 = self.conv5_bn(self.conv5(F.leaky_relu(encoder4, 0.2)))
+        encoder6 = self.conv6_bn(self.conv6(F.leaky_relu(encoder5, 0.2)))
+        encoder7 = self.conv7_bn(self.conv7(F.leaky_relu(encoder6, 0.2)))
+        encoder8 = self.conv8(F.leaky_relu(encoder7, 0.2))
+        decoder1 = F.dropout(self.deconv1_bn(self.deconv1(F.relu(encoder8))), 0.5, training=True)
+        decoder1 = torch.cat([decoder1, encoder7], 1)
+        decoder2 = F.dropout(self.deconv2_bn(self.deconv2(F.relu(decoder1))), 0.5, training=True)
+        decoder2 = torch.cat([decoder2, encoder6], 1)
+        decoder3 = F.dropout(self.deconv3_bn(self.deconv3(F.relu(decoder2))), 0.5, training=True)
+        decoder3 = torch.cat([decoder3, encoder5], 1)
+        decoder4 = self.deconv4_bn(self.deconv4(F.relu(decoder3)))
+        decoder4 = torch.cat([decoder4, encoder4], 1)
+        decoder5 = self.deconv5_bn(self.deconv5(F.relu(decoder4)))
+        decoder5 = torch.cat([decoder5, encoder3], 1)
+        decoder6 = self.deconv6_bn(self.deconv6(F.relu(decoder5)))
+        decoder6 = torch.cat([decoder6, encoder2], 1)
+        decoder7 = self.deconv7_bn(self.deconv7(F.relu(decoder6)))
+        decoder7 = torch.cat([decoder7, encoder1], 1)
+        decoder8 = self.deconv8(F.relu(decoder7))
+        output = torch.tanh(decoder8)
 
-        return o
+        return output
 
 class discriminator(nn.Module):
     # initializers
@@ -319,26 +341,12 @@ for epoch in range(numTrainEpochs):
     D_losses = []
     G_losses = []
     num_iter = 0
-    for x_ in train_loader:
+    for x_, y_ in train_loader:
         # train discriminator D
         D.zero_grad()
 
         if inverse_order:
-            y_ = x_[:, :, :, 0:imgSize]
-            x_ = x_[:, :, :, imgSize:]
-        else:
-            y_ = x_[:, :, :, imgSize:]
-            x_ = x_[:, :, :, 0:imgSize]
-            
-        x_ = imgs_resize(x_, 286)
-        y_ = imgs_resize(y_, 286)
-        
-        x_ = imgs_resize(x_, 256)
-        y_ = imgs_resize(y_, 256)
-
-#         x_, y_ = random_crop(x_, y_, 256)
-
-        x_, y_ = random_fliplr(x_, y_)
+            x_, y_ = y_, x_
 
         x_, y_ = Variable(x_), Variable(y_)
 
@@ -376,41 +384,34 @@ for epoch in range(numTrainEpochs):
     print('[%d/%d], loss_d: %.3f, loss_g: %.3f' % ((epoch + 1), numTrainEpochs, torch.mean(torch.FloatTensor(D_losses)),
                                                               torch.mean(torch.FloatTensor(G_losses))))
 
-torch.save(G.state_dict(), 'generator_param.pkl')
+torch.save(G.state_dict(), 'generator_param3.pkl')
 torch.save(D.state_dict(), 'discriminator_param.pkl')
 with open('train_hist.pkl', 'wb') as f:
     pickle.dump(train_hist, f)
 
-if not os.path.isdir(image_location + '_results'):
-    os.mkdir(image_location + '_results')
+if not os.path.isdir(image_location + '_results3'):
+    os.mkdir(image_location + '_results3')
 
 G = generator(ngf)
 G
-G.load_state_dict(torch.load('generator_param.pkl'))
+G.load_state_dict(torch.load('generator_param3.pkl'))
 G.eval()
 
 # network
 with torch.no_grad():
     n = 0
-    for x_ in test_loader:
+    for x_, y_ in test_loader:
         if inverse_order:
-            y_ = x_[:, :, :, :200]
-            x_ = x_[:, :, :, 200:]
-        else:
-            y_ = x_[:, :, :, 200:]
-            x_ = x_[:, :, :, :200]
-
-        x_ = imgs_resize(x_, 256)
-        y_ = imgs_resize(y_, 256)
+            x_, y_ = y_, x_
 
         x_ = Variable(x_)
         test_image = G(x_)
 
-        path = image_location + '_results/' + str(n) + '_input.png'
+        path = image_location + '_results3/' + str(n) + '_input.png'
         plt.imsave(path, (x_[0].cpu().data.numpy().transpose(1, 2, 0) + 1) / 2)
-        path = image_location + '_results/' + str(n) + '_output.png'
+        path = image_location + '_results3/' + str(n) + '_output.png'
         plt.imsave(path, (test_image[0].cpu().data.numpy().transpose(1, 2, 0) + 1) / 2)
-        path = image_location + '_results/' + str(n) + '_target.png'
+        path = image_location + '_results3/' + str(n) + '_target.png'
         plt.imsave(path, (y_[0].numpy().transpose(1, 2, 0) + 1) / 2)
 
         n += 1
