@@ -277,21 +277,16 @@ def normal_init(m, mean, std):
         m.weight.data.normal_(mean, std)
         m.bias.data.zero_()
 
-# network
 G = generator(ngf)
 D = discriminator(ndf)
 G.weight_init(mean=0.0, std=0.02)
 D.weight_init(mean=0.0, std=0.02)
-G
-D
 G.train()
 D.train()
 
-# loss
 BCE_loss = nn.BCELoss()
 L1_loss = nn.L1Loss()
 
-# Adam optimizer
 G_optimizer = optim.Adam(G.parameters(), lr=lrG, betas=(0.5, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr=lrD, betas=(0.5, 0.999))
 
@@ -355,11 +350,10 @@ if not os.path.isdir(image_location + '_results2'):
     os.mkdir(image_location + '_results2')
 
 G = generator(ngf)
-G
 G.load_state_dict(torch.load('generator_param2.pkl'))
 G.eval()
 
-# network
+# test
 with torch.no_grad():
     n = 0
     for x_, y_ in test_loader:

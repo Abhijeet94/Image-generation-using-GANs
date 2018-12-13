@@ -279,7 +279,6 @@ def normal_init(m, mean, std):
 
 
 G = generator(ngf)
-G
 G.load_state_dict(torch.load('generator_param3.pkl'))
 G.eval()
 

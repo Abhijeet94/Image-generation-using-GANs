@@ -277,21 +277,16 @@ def normal_init(m, mean, std):
         m.weight.data.normal_(mean, std)
         m.bias.data.zero_()
 
-# network
 G = generator(ngf)
 D = discriminator(ndf)
 G.weight_init(mean=0.0, std=0.02)
 D.weight_init(mean=0.0, std=0.02)
-G
-D
 G.train()
 D.train()
 
-# loss
 BCE_loss = nn.BCELoss()
 L1_loss = nn.L1Loss()
 
-# Adam optimizer
 G_optimizer = optim.Adam(G.parameters(), lr=lrG, betas=(0.5, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr=lrD, betas=(0.5, 0.999))
 
@@ -312,26 +307,12 @@ for epoch in range(numTrainEpochs):
 
         x_, y_ = Variable(x_), Variable(y_)
 
-        # D_result = D(x_, y_).squeeze()
-        # D_real_loss = BCE_loss(D_result, Variable(torch.ones(D_result.size())))
-
         G_result = G(x_)
-        # D_result = D(x_, G_result).squeeze()
-        # D_fake_loss = BCE_loss(D_result, Variable(torch.zeros(D_result.size())))
-
-        # D_train_loss = (D_real_loss + D_fake_loss) * 0.5
-        # D_train_loss.backward()
-        # D_optimizer.step()
-
-        # train_hist['D_losses'].append(D_train_loss.item())
-
-        # D_losses.append(D_train_loss.item())
 
         # train generator G
         G.zero_grad()
 
         G_result = G(x_)
-        # D_result = D(x_, G_result).squeeze()
 
         G_train_loss = L1_loss(G_result, y_)
         G_train_loss.backward()
@@ -346,7 +327,6 @@ for epoch in range(numTrainEpochs):
     print('[%d/%d], loss_g: %.3f' % ((epoch + 1), numTrainEpochs, torch.mean(torch.FloatTensor(G_losses))))
 
 torch.save(G.state_dict(), 'generator_param1.pkl')
-# torch.save(D.state_dict(), 'discriminator_param.pkl')
 with open('train_hist.pkl', 'wb') as f:
     pickle.dump(train_hist, f)
 
@@ -354,11 +334,10 @@ if not os.path.isdir(image_location + '_results1'):
     os.mkdir(image_location + '_results1')
 
 G = generator(ngf)
-G
 G.load_state_dict(torch.load('generator_param1.pkl'))
 G.eval()
 
-# network
+# test
 with torch.no_grad():
     n = 0
     for x_, y_ in test_loader:
