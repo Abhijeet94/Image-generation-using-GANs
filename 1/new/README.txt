@@ -56,9 +56,11 @@ References
 
 
 - VAE
+        - Kingma, Diederik P., and Max Welling. "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013).
 
 	- C. Doersch. Tutorial on variational autoencoders. arXiv preprint arXiv:1606.05908, 2016
 
+        - https://towardsdatascience.com/intuitively-understanding-variational-autoencoders-1bfe67eb5daf
 
 
 
